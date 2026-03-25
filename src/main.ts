@@ -172,7 +172,9 @@ async function ingestPdf(args: { pdfPath: string; config: Config; cache: PaperCa
 
 	console.log(`[ingest] filed to: ${dstPdfPath}`);
 
-	await ensureConceptNotes(config.obsidianConceptsDir, classification.concepts);
+	const conceptsForPaper = await ensureConceptNotes(config.obsidianConceptsDir, classification.concepts, {
+		maxNew: config.maxNewConceptsPerIngest,
+	});
 	await upsertPaperNote(config.obsidianPapersDir, {
 		slug,
 		title: classification.title,
@@ -181,7 +183,7 @@ async function ingestPdf(args: { pdfPath: string; config: Config; cache: PaperCa
 		topicFolder,
 		pdfBasename,
 		summary: classification.summary,
-		concepts: classification.concepts,
+		concepts: conceptsForPaper,
 	});
 	await updatePaperIndex(config.paperIndexFile, slug, topicFolder, pdfBasename);
 
@@ -213,6 +215,7 @@ async function main(): Promise<void> {
 	logWatcher(`config obsidian concepts: ${config.obsidianConceptsDir}`);
 	logWatcher(`config obsidian papers: ${config.obsidianPapersDir}`);
 	logWatcher(`config idea log: ${config.ideaLogFile}`);
+	logWatcher(`config max new concepts/ingest: ${config.maxNewConceptsPerIngest}`);
 	logWatcher(`config model: openai/${config.modelId}`);
 	logWatcher(`config cleanup every: ${config.cleanupEveryDays} days`);
 

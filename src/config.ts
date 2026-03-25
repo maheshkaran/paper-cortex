@@ -10,6 +10,7 @@ export interface Config {
 	obsidianConceptsDir: string;
 	paperIndexFile: string;
 	ideaLogFile: string;
+	maxNewConceptsPerIngest: number;
 	cleanupEveryDays: number;
 	modelId: string;
 	maxReorgMoves: number;
@@ -45,7 +46,7 @@ export function getConfig(): Config {
 	const obsidianPapersDir = path.join(obsidianMindMapDir, "Papers");
 	const obsidianConceptsDir = path.join(obsidianMindMapDir, "Concepts");
 	const paperIndexFile = path.join(obsidianMindMapDir, "Paper_Index.md");
-	const ideaLogFile = envPath("PAPER_CORTEX_IDEA_LOG_FILE", path.join(obsidianVaultDir, "Idea Log.md"));
+	const ideaLogFile = path.join(obsidianVaultDir, "Idea_Log.md");
 
 	return {
 		inboxDir,
@@ -56,6 +57,7 @@ export function getConfig(): Config {
 		obsidianConceptsDir,
 		paperIndexFile,
 		ideaLogFile,
+		maxNewConceptsPerIngest: envNumber("PAPER_CORTEX_MAX_NEW_CONCEPTS_PER_INGEST", 8),
 		cleanupEveryDays: envNumber("PAPER_CORTEX_CLEANUP_EVERY_DAYS", 10),
 		modelId: process.env.PAPER_CORTEX_MODEL?.trim() || "gpt-4.1-mini",
 		maxReorgMoves: envNumber("PAPER_CORTEX_MAX_REORG_MOVES", 20),

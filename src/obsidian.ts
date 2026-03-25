@@ -17,18 +17,39 @@ export function wikiLink(name: string): string {
 	return `[[${name}]]`;
 }
 
-export async function ensureConceptNotes(conceptsDir: string, concepts: string[]): Promise<void> {
+export async function ensureConceptNotes(
+	conceptsDir: string,
+	concepts: string[],
+	opts?: { maxNew?: number },
+): Promise<string[]> {
 	await ensureDir(conceptsDir);
+	const maxNew = opts?.maxNew ?? Number.POSITIVE_INFINITY;
+	let newCreated = 0;
+	const kept: string[] = [];
+	const seen = new Set<string>();
 	for (const concept of concepts) {
+		if (seen.has(concept)) continue;
+		seen.add(concept);
+
 		const file = path.join(conceptsDir, `${concept}.md`);
-		if (await exists(file)) continue;
+		if (await exists(file)) {
+			kept.push(concept);
+			continue;
+		}
+
+		if (newCreated >= maxNew) continue;
+
 		const content = `# ${concept.replace(/_/g, " ")}
 
 ## Summary
 
 (Stub)\n`;
 		await atomicWriteUtf8(file, `${content}\n`);
+		newCreated++;
+		kept.push(concept);
 	}
+
+	return kept;
 }
 
 export async function upsertPaperNote(papersDir: string, input: PaperNoteInput): Promise<void> {

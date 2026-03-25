@@ -48,9 +48,44 @@ export class PaperCache {
 	}
 
 	static async sha256File(filePath: string): Promise<{ sha256: string; size: number; mtimeMs: number }> {
-		const stat = await fs.stat(filePath);
-		const buf = await fs.readFile(filePath);
-		const sha256 = crypto.createHash("sha256").update(buf).digest("hex");
-		return { sha256, size: stat.size, mtimeMs: stat.mtimeMs };
+		// On macOS file-provider backed folders (Google Drive/iCloud/etc.), newly created files can
+		// briefly exist but be unreadable, yielding errno=-11 (EAGAIN) via Node as
+		// "Unknown system error -11". We retry to allow the provider to finish materializing the file.
+		const isRetryable = (err: unknown): boolean => {
+			if (!err || typeof err !== "object") return false;
+			const e = err as { errno?: number; code?: string };
+			return (
+				e.errno === -11 ||
+				e.code === "EAGAIN" ||
+				e.code === "EBUSY" ||
+				e.code === "Unknown system error -11"
+			);
+		};
+
+		const sleep = async (ms: number) => {
+			await new Promise((r) => setTimeout(r, ms));
+		};
+
+		const maxAttempts = 10;
+		let delayMs = 250;
+
+		for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+			try {
+				const stat = await fs.stat(filePath);
+				const buf = await fs.readFile(filePath);
+				const sha256 = crypto.createHash("sha256").update(buf).digest("hex");
+				return { sha256, size: stat.size, mtimeMs: stat.mtimeMs };
+			} catch (err) {
+				if (attempt < maxAttempts && isRetryable(err)) {
+					await sleep(delayMs);
+					delayMs = Math.min(delayMs * 2, 5000);
+					continue;
+				}
+				throw err;
+			}
+		}
+
+		// Unreachable, but keeps TS happy.
+		throw new Error(`sha256File: exhausted retries for ${filePath}`);
 	}
 }
