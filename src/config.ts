@@ -11,6 +11,8 @@ export interface Config {
 	paperIndexFile: string;
 	ideaLogFile: string;
 	maxNewConceptsPerIngest: number;
+	paperMathSummaryPages: number;
+	paperMathSummaryStartupMax: number;
 	cleanupEveryDays: number;
 	modelId: string;
 	maxReorgMoves: number;
@@ -58,6 +60,9 @@ export function getConfig(): Config {
 		paperIndexFile,
 		ideaLogFile,
 		maxNewConceptsPerIngest: envNumber("PAPER_CORTEX_MAX_NEW_CONCEPTS_PER_INGEST", 8),
+		// 0 means "all pages"
+		paperMathSummaryPages: envNumber("PAPER_CORTEX_PAPER_MATH_SUMMARY_PAGES", 0),
+		paperMathSummaryStartupMax: envNumber("PAPER_CORTEX_PAPER_MATH_SUMMARY_STARTUP_MAX", 3),
 		cleanupEveryDays: envNumber("PAPER_CORTEX_CLEANUP_EVERY_DAYS", 10),
 		modelId: process.env.PAPER_CORTEX_MODEL?.trim() || "gpt-4.1-mini",
 		maxReorgMoves: envNumber("PAPER_CORTEX_MAX_REORG_MOVES", 20),

@@ -21,6 +21,7 @@ import { fillConceptPreliminariesIfTitleOnly } from "./concept-prelim.js";
 import { annotateIdeaLogFile } from "./idea-log.js";
 import { AgentState } from "./state.js";
 import { runCleanupIfDue } from "./cleanup.js";
+import { backfillPaperMathSummaries, fillPaperMathSummaryIfMissing } from "./paper-summary.js";
 
 function ts(): string {
 	return new Date().toISOString();
@@ -187,6 +188,15 @@ async function ingestPdf(args: { pdfPath: string; config: Config; cache: PaperCa
 	});
 	await updatePaperIndex(config.paperIndexFile, slug, topicFolder, pdfBasename);
 
+	// Fill a detailed mathematical summary for the paper note (LLM).
+	const paperNotePath = path.join(config.obsidianPapersDir, `${slug}.md`);
+	await fillPaperMathSummaryIfMissing({
+		paperNotePath,
+		libraryDir: config.libraryDir,
+		modelId: config.modelId,
+		pages: config.paperMathSummaryPages,
+	});
+
 	if (created || classification.createNewTopic) {
 		await reorganizeForNewTopic({ newTopic: topicFolder, config, cache });
 	}
@@ -216,6 +226,8 @@ async function main(): Promise<void> {
 	logWatcher(`config obsidian papers: ${config.obsidianPapersDir}`);
 	logWatcher(`config idea log: ${config.ideaLogFile}`);
 	logWatcher(`config max new concepts/ingest: ${config.maxNewConceptsPerIngest}`);
+	logWatcher(`config paper math summary pages: ${config.paperMathSummaryPages}`);
+	logWatcher(`config paper math summary startup max: ${config.paperMathSummaryStartupMax}`);
 	logWatcher(`config model: openai/${config.modelId}`);
 	logWatcher(`config cleanup every: ${config.cleanupEveryDays} days`);
 
@@ -243,6 +255,25 @@ async function main(): Promise<void> {
 
 	runCleanup();
 	const cleanupTimer = setInterval(runCleanup, 24 * 60 * 60 * 1000);
+
+	// Backfill a few missing paper math summaries on startup (capped).
+	queue = queue
+		.then(async () => {
+			if (config.paperMathSummaryStartupMax <= 0) return;
+			const res = await backfillPaperMathSummaries({
+				papersDir: config.obsidianPapersDir,
+				libraryDir: config.libraryDir,
+				modelId: config.modelId,
+				pages: config.paperMathSummaryPages,
+				maxNotes: config.paperMathSummaryStartupMax,
+			});
+			if (res.updated > 0) {
+				console.log(`[paper-summary] startup backfill: processed=${res.processed}, updated=${res.updated}`);
+			}
+		})
+		.catch((err) => {
+			console.error("[error] paper summary startup backfill failed:", err);
+		});
 
 	// 1) PDF inbox watcher
 	const inboxWatcher = chokidar.watch(config.inboxDir, {

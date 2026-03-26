@@ -31,7 +31,7 @@ export async function completeText(model: OpenAIModel, prompt: string): Promise<
 	const response = await completeSimple(
 		model,
 		{ messages: [{ role: "user", content: prompt, timestamp: Date.now() }] },
-		{ reasoning: "minimal" },
+		{ reasoning: "low" },
 	);
 	const textBlock = response.content.find((b) => b.type === "text");
 	if (!textBlock || textBlock.type !== "text") throw new Error("No text response from model");

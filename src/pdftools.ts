@@ -47,8 +47,13 @@ export async function pdfInfo(pdfPath: string): Promise<PdfInfo> {
 
 export async function pdfToTextPreview(pdfPath: string, pages: number): Promise<string> {
 	// Writes to stdout when output file is "-"
-	const args = ["-f", "1", "-l", String(Math.max(1, pages)), "-layout", pdfPath, "-"];
-	const res = await run("pdftotext", args, 30_000);
+	const maxPages = Math.max(0, pages);
+	const args =
+		maxPages > 0
+			? ["-f", "1", "-l", String(maxPages), "-layout", pdfPath, "-"]
+			: ["-f", "1", "-layout", pdfPath, "-"];
+	const timeoutMs = maxPages > 0 ? 30_000 : 120_000;
+	const res = await run("pdftotext", args, timeoutMs);
 	if (res.code !== 0) {
 		throw new Error(`pdftotext failed (${res.code}): ${res.stderr.trim()}`);
 	}

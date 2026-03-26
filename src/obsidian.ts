@@ -70,6 +70,10 @@ ${input.authors ? `- Author: ${input.authors}\n` : ""}${input.year ? `- Year: ${
 
 ${input.summary.trim()}
 
+## Mathematical Summary
+
+(Autofill pending)
+
 ## Themes
 
 ${conceptLinks || "(none)"}
